@@ -65,7 +65,7 @@
 5 DESCRIPTION
 =============
 
-  `cl-manager' manages project dependencies with git.
+  `cl-manage' manages project dependencies with git.
 
   Goals:
 
@@ -87,7 +87,7 @@
 ==============
 
   Just put it somewhere ASDF finds it. I usually put it under
-  `~/common-lisp'.  Optionally you can add
+  `~/common-lisp' Optionally you can add
 
   ,----
   | (asdf:load-system "cl-manager" :verbose nil)
@@ -118,14 +118,15 @@
 
   `env'
         The CLM environment. Most likely you want that to set to the
-        current working directory. The environment determiners where
+        current working directory. The environment determines where
         dependencies are installed to.
 
   `(setf env)'
         Set the environment.
 
   `load-system'
-        Load a system by name. This works almost as `asdf:load-system'.
+        Load a system by name. This works almost as the same as
+        `asdf:load-system'.
 
   `install'
         Looks inside your `clmfile' and installs all dependency.

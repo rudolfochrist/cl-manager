@@ -60,7 +60,7 @@ T
 
 * DESCRIPTION
 
-~cl-manager~ manages project dependencies with git.
+=cl-manage= manages project dependencies with git.
 
 Goals:
 
@@ -77,7 +77,7 @@ These programs have to be installed beforehand:
 
 * INSTALLATION
 
-Just put it somewhere ASDF finds it. I usually put it under ~~/common-lisp~.
+Just put it somewhere ASDF finds it. I usually put it under =~/common-lisp=
 Optionally you can add
 
 #+begin_src lisp
@@ -86,9 +86,9 @@ Optionally you can add
 
 in your init file to automatically load it. 
 
-* ~clmfile~
+* =clmfile=
 
-The ~clmfile~ specifies dependencies. Example:
+The =clmfile= specifies dependencies. Example:
 
 #+begin_example
 # This is a comment and is ignored
@@ -98,19 +98,19 @@ postmodern
 #+end_example
 
 Each dependency can have an optional version specifier. This is a git branch/tag/commit hash. After the
-dependencies are installed a ~clm.lock~ file is written. You want both under version control. 
+dependencies are installed a =clm.lock= file is written. You want both under version control. 
 
 * FUNCTIONS & VARIABLES
 
 - ~env~ ::
   The CLM environment. Most likely you want that to set to the current working directory. The environment
-  determiners where dependencies are installed to.
+  determines where dependencies are installed to.
 
 - ~(setf env)~ ::
   Set the environment.
 
 - ~load-system~ ::
-  Load a system by name. This works almost as ~asdf:load-system~.
+  Load a system by name. This works almost as the same as ~asdf:load-system~.
 
 - ~install~ ::
   Looks inside your ~clmfile~ and installs all dependency.
