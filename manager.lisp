@@ -281,10 +281,13 @@ If VERBOSE is non-nil display verbose output."
 
 (defun dot-clm-directory-search (name)
   "Search .clm directory for system NAME."
-  (find-if (lambda (p)
-             (and (string= (asdf:primary-system-name name) (pathname-name p))
-                  (string= "asd" (pathname-type p))))
-           (uiop:directory-files (merge-pathnames ".clm/" (env)) "**/*.asd")) )
+  (handler-case
+      (find-if (lambda (p)
+                 (and (string= (asdf:primary-system-name name) (pathname-name p))
+                      (string= "asd" (pathname-type p))))
+               (uiop:directory-files (merge-pathnames ".clm/" (env)) "**/*.asd"))
+    (no-env-error (condition)
+      (declare (ignore condition)))))
 
 
 (defun register-search-functions ()
