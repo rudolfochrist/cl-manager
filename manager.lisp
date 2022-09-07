@@ -15,7 +15,8 @@
    #:dot-clm-directory-search
    #:register-search-functions
    #:load-system
-   #:update))
+   #:update
+   #:find-system))
 
 (in-package #:cl-manager)
 
@@ -123,7 +124,8 @@
              (format stream "System ~A not found!" (missing-system condition)))))
 
 
-(defun find-%system (name)
+(defun find-system (name)
+  "Lookup system with NAME in index."
   (multiple-value-bind (system foundp)
       (gethash name *index*)
     (unless foundp
@@ -171,7 +173,7 @@
              (unless (blacklistp dep-name)
                (multiple-value-bind (dep foundp)
                    (gethash dep-name deps)
-                 (let ((%system (find-%system dep-name)))
+                 (let ((%system (find-system dep-name)))
                    (if foundp
                        (setf (dep-project dep)
                              (%system-project %system)
