@@ -16,7 +16,8 @@
    #:register-search-functions
    #:load-system
    #:update
-   #:find-system))
+   #:find-system
+   #:add-local-system))
 
 (in-package #:cl-manager)
 
@@ -133,13 +134,15 @@
     system))
 
 
-(defun make-index-table (systems-file)
+(defun make-index-table (systems-file &key merge-index)
   (with-open-file (f systems-file)
-    (read-line f)                       ; Skip comment.
-    (loop with index = (make-hash-table :test 'equal)
+    (loop with index = (if merge-index
+                           *index*
+                           (make-hash-table :test 'equal))
           for line = (read-line f nil nil)
           while line
-          unless (empty-string-p line)
+          when (and (not (empty-string-p line))
+                    (not (uiop:string-prefix-p "#" line)))
             do (destructuring-bind (project system-name source &rest dependencies)
                    (uiop:split-string line)
                  (setf (gethash system-name index)
@@ -155,7 +158,10 @@
   (qprint "Updating index...")
   (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt")))
     (curl-file url systems-file)
-    (make-index-table systems-file)))
+    (make-index-table systems-file))
+  ;; local index
+  (dolist (index-file (uiop:directory-files (uiop:pathname-directory-pathname *local-index-file*)))
+    (make-index-table index-file :merge-index t)))
 
 
 (defvar *system-blacklist*
@@ -296,3 +302,19 @@ If VERBOSE is non-nil display verbose output."
   (setf asdf:*system-definition-search-functions*
         (append (list 'current-directory-search 'dot-clm-directory-search)
                 asdf:*system-definition-search-functions*)))
+
+(defvar *local-index-file* (merge-pathnames "clm/local.txt" (uiop:xdg-data-home)))
+
+
+(defun add-local-system (project system-name source &rest dependencies)
+  "Add a system specification to the local index.
+
+This can also be used to \"update\" systems with local informaton
+e.g. using a different fork."
+  (ensure-directories-exist *local-index-file*)
+  (with-open-file (out *local-index-file*
+                       :direction :output
+                       :if-exists :append
+                       :if-does-not-exist :create)
+    (format out "~&~A ~A ~A~{ ~A~}~%"
+            project system-name source dependencies)))
