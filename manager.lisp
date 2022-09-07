@@ -21,7 +21,7 @@
 (in-package #:cl-manager)
 
 
-(defvar *env* nil
+(defvar *env* (uiop:getcwd)
   "The cl-manager working directory")
 
 
