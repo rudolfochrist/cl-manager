@@ -31,7 +31,8 @@
                       (error "Please install `curl'. Refer to your system's package manager.")))
   :perform (load-op :after (c o)
                     (let ((systems (asdf:system-relative-pathname "cl-manager" "systems.txt")))
-                      (when (probe-file systems)
-                        (uiop:symbol-call :cl-manager :make-index-table systems)))
+                      (if (probe-file systems)
+                          (uiop:symbol-call :cl-manager :make-index-table systems)
+                          (uiop:symbol-call :cl-manager :update-index)))
                     (uiop:symbol-call :cl-manager :register-search-functions)))
 
