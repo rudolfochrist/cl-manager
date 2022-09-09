@@ -93,6 +93,13 @@
         collect v))
 
 
+(defun alist-to-hash-table (alist)
+  (loop with hash-table = (make-hash-table :test 'equal)
+        for (key . value) in alist
+        do (setf (gethash key hash-table) value)
+        finally (return hash-table)))
+
+
 (defstruct dep
   project system-name source ref)
 
@@ -171,9 +178,8 @@
 (defun blacklistp (name)
   (member name *system-blacklist* :test #'string=))
 
-(defun resolve-dependencies (clmfile)
-  (loop with deps = (parse-clmfile clmfile)
-        with q = (hash-keys deps)
+(defun resolve-dependencies (deps)
+  (loop with q = (hash-keys deps)
         while q
         do (let ((dep-name (pop q)))
              (unless (blacklistp dep-name)
@@ -222,19 +228,16 @@
 
 
 
-(defun download-dependencies (&optional wipe)
-  (when wipe
-    (uiop:delete-directory-tree (merge-pathnames ".clm/" (env)) :validate t))
-  (let ((deps (read-lockfile (merge-pathnames "clm.lock" (env)))))
-    (loop for dep in deps
-          do (qprint "Installing ~A" t (dep-project dep))
-          unless (probe-file (merge-pathnames (format nil ".clm/~A" (dep-project dep)) (env)))
-            do (exec
-                (format nil "git clone --depth 1~@[ -b ~A~] ~A .clm/~A"
-                        (dep-ref dep)
-                        (dep-source dep)
-                        (dep-project dep)))
-          finally (return (values)))))
+(defun download-dependencies (deps)
+  (loop for dep in deps
+        do (qprint "Installing ~A" t (dep-project dep))
+        unless (probe-file (merge-pathnames (format nil ".clm/~A" (dep-project dep)) (env)))
+          do (exec
+              (format nil "git clone --depth 1~@[ -b ~A~] ~A .clm/~A"
+                      (dep-ref dep)
+                      (dep-source dep)
+                      (dep-project dep)))
+        finally (return (values))))
 
 
 (define-condition uninitialized-git (clm-error)
@@ -248,8 +251,19 @@
   "Install systems defined in CLMFILE."
   (when (or force
             (not (probe-file (merge-pathnames "clm.lock" (env)))))
-    (write-lockfile (resolve-dependencies (merge-pathnames "clmfile" (env)))))
-  (download-dependencies force))
+    (write-lockfile (resolve-dependencies (parse-clmfile (merge-pathnames "clmfile" (env))))))
+  (when force
+    (uiop:delete-directory-tree (merge-pathnames ".clm/" (env)) :validate t))
+  (download-dependencies (read-lockfile (merge-pathnames "clm.lock" (env)))))
+
+
+(defun install-system (name &optional ref)
+  (let ((system (find-system name)))
+    (when (not (probe-file (merge-pathnames (format nil ".clm/~A" (%system-project system))
+                                            (env))))
+      (download-dependencies
+       (resolve-dependencies
+        (alist-to-hash-table `((,name . ,(make-dep :system-name name :ref ref)))))))))
 
 
 (defun update ()
