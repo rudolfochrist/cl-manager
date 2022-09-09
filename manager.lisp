@@ -24,10 +24,26 @@
 
 (in-package #:cl-manager)
 
+;;; user options
 
 (defvar *env* (uiop:getcwd)
   "The cl-manager working directory")
 
+
+(defvar *system-blacklist* (list "asdf" "uiop")
+  "List of blacklisted systems.
+
+Each member won't be installed when it is found between the
+dependencies of a system. This possibly can break some stuff. So I
+guess you know what you're doing.")
+
+;;; variables
+
+(defvar *index-url* "https://raw.githubusercontent.com/rudolfochrist/clm-projects/master/systems.txt")
+(defvar *local-index-file* (merge-pathnames "clm/local.txt" (uiop:xdg-data-home)))
+(defvar *index* nil)
+
+;;; conditions
 
 (define-condition clm-error (error)
   ((message :accessor clm-errro-message
@@ -40,23 +56,27 @@
   ())
 
 
-(defun env ()
-  "Path to the CLM environment."
-  (if (null *env*)
-      (restart-case
-          (error 'no-env-error
-                 :message "Environment not initialized.")
-        (use-cwd ()
-          :report (lambda (stream)
-                    (format stream "Set dep-name directory (~A) as environment."
-                            (uiop:getcwd)))
-          (setf (env) (uiop:getcwd))))
-      *env*))
+(define-condition system-not-found (clm-error)
+  ((system :accessor missing-system
+           :initarg :system))
+  (:report (lambda (condition stream)
+             (format stream "System ~A not found!" (missing-system condition)))))
 
 
-(defun (setf env) (path)
-  "Set the CLM environment to PATH."
-  (setf *env* path))
+(define-condition uninitialized-git (clm-error)
+  ()
+  (:report (lambda (condition stream)
+             (declare (ignore condition))
+             (format stream "Not a git repository: ~A~%Please run `git init'." (env)))))
+
+;;; helpers
+
+(defstruct dep
+  project system-name source ref)
+
+
+(defstruct %system
+  project system-name source dependencies)
 
 
 (defun clm-install-directory ()
@@ -103,10 +123,6 @@
         finally (return hash-table)))
 
 
-(defstruct dep
-  project system-name source ref)
-
-
 (defun parse-clmfile (clmfile)
   (with-open-file (f clmfile)
     (loop with deps = (make-hash-table :test 'equal)
@@ -121,27 +137,6 @@
                                  :ref ref)))
           finally (return deps))))
 
-(defvar *index-url* "https://raw.githubusercontent.com/rudolfochrist/clm-projects/master/systems.txt")
-(defvar *index* nil)
-
-(defstruct %system
-  project system-name source dependencies)
-
-
-(define-condition system-not-found (clm-error)
-  ((system :accessor missing-system
-           :initarg :system))
-  (:report (lambda (condition stream)
-             (format stream "System ~A not found!" (missing-system condition)))))
-
-
-(defun find-system (name)
-  "Lookup system with NAME in index."
-  (multiple-value-bind (system foundp)
-      (gethash name *index*)
-    (unless foundp
-      (error 'system-not-found :system name))
-    system))
 
 
 (defun make-index-table (systems-file &key merge-index)
@@ -162,24 +157,6 @@
                                      :dependencies (remove-if #'empty-string-p dependencies))))
           finally (setf *index* index)))
   *index*)
-
-
-(defun update-index (&optional (url *index-url*))
-  (qprint "Updating index...")
-  (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt")))
-    (curl-file url systems-file)
-    (make-index-table systems-file))
-  ;; local index
-  (dolist (index-file (uiop:directory-files (uiop:pathname-directory-pathname *local-index-file*)))
-    (make-index-table index-file :merge-index t)))
-
-
-(defvar *system-blacklist* (list "asdf" "uiop")
-  "List of blacklisted systems.
-
-Each member won't be installed when it is found between the
-dependencies of a system. This possibly can break some stuff. So I
-guess you know what you're doing.")
 
 
 (defun blacklistp (name)
@@ -247,11 +224,46 @@ guess you know what you're doing.")
         finally (return (values))))
 
 
-(define-condition uninitialized-git (clm-error)
-  ()
-  (:report (lambda (condition stream)
-             (declare (ignore condition))
-             (format stream "Not a git repository: ~A~%Please run `git init'." (env)))))
+;;; API
+
+(defun env ()
+  "Path to the CLM environment."
+  (if (null *env*)
+      (restart-case
+          (error 'no-env-error
+                 :message "Environment not initialized.")
+        (use-cwd ()
+          :report (lambda (stream)
+                    (format stream "Set dep-name directory (~A) as environment."
+                            (uiop:getcwd)))
+          (setf (env) (uiop:getcwd))))
+      *env*))
+
+
+(defun (setf env) (path)
+  "Set the CLM environment to PATH."
+  (setf *env* path))
+
+
+
+(defun find-system (name)
+  "Lookup system with NAME in index."
+  (multiple-value-bind (system foundp)
+      (gethash name *index*)
+    (unless foundp
+      (error 'system-not-found :system name))
+    system))
+
+
+(defun update-index (&optional (url *index-url*))
+  (qprint "Updating index...")
+  (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt")))
+    (curl-file url systems-file)
+    (make-index-table systems-file))
+  ;; local index
+  (dolist (index-file (uiop:directory-files (uiop:pathname-directory-pathname *local-index-file*)))
+    (make-index-table index-file :merge-index t)))
+
 
 
 (defun install (&optional force)
@@ -329,7 +341,6 @@ VERBOSE, SILENT, FORCE a passed as is to LOAD-SYSTEM."
         (append (list 'current-directory-search 'dot-clm-directory-search)
                 asdf:*system-definition-search-functions*)))
 
-(defvar *local-index-file* (merge-pathnames "clm/local.txt" (uiop:xdg-data-home)))
 
 
 (defun add-local-system (project system-name source &rest dependencies)
