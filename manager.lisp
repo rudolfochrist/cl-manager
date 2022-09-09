@@ -17,7 +17,10 @@
    #:load-system
    #:update
    #:find-system
-   #:add-local-system))
+   #:add-local-system
+   #:install-system
+   #:load-systems
+   #:*system-blacklist*))
 
 (in-package #:cl-manager)
 
@@ -171,8 +174,12 @@
     (make-index-table index-file :merge-index t)))
 
 
-(defvar *system-blacklist*
-  (list "asdf" "uiop"))
+(defvar *system-blacklist* (list "asdf" "uiop")
+  "List of blacklisted systems.
+
+Each member won't be installed when it is found between the
+dependencies of a system. This possibly can break some stuff. So I
+guess you know what you're doing.")
 
 
 (defun blacklistp (name)
