@@ -272,7 +272,7 @@
   (install t))
 
 
-(defun load-system (name &key verbose silent)
+(defun load-system (name &key verbose silent force)
   "Load system with NAME.
 
 If VERBOSE is non-nil display verbose output."
@@ -281,17 +281,25 @@ If VERBOSE is non-nil display verbose output."
         (*load-print* nil)
         (*compile-print* nil))
     (unless silent
-      (qprint "Loading ~A with dependencies." *standard-output* name))
+      (qprint "Loading ~A." *standard-output* name))
     (handler-bind ((warning #'muffle-warning)
                    #+sbcl (sb-ext:compiler-note #'muffle-warning))
       (restart-case
-          (asdf:load-system name :verbose verbose)
+          (asdf:load-system name :verbose verbose :force force)
         (install ()
           :report "Unmet dependencies. Install them?"
           :test (lambda (condition) (typep condition 'asdf/find-component:missing-dependency))
           (install)
           (load-system name :verbose verbose :silent t))))))
 
+
+(defun load-systems (systems &key verbose silent force)
+  "Load a list of systems at once.
+
+VERBOSE, SILENT, FORCE a passed as is to LOAD-SYSTEM."
+  (mapc (lambda (system)
+          (load-system system :verbose verbose :silent silent :force force))
+        systems))
 
 
 (defun current-directory-search (name)
