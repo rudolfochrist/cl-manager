@@ -265,12 +265,9 @@ guess you know what you're doing.")
 
 
 (defun install-system (name &optional ref)
-  (let ((system (find-system name)))
-    (when (not (probe-file (merge-pathnames (format nil ".clm/~A" (%system-project system))
-                                            (env))))
-      (download-dependencies
-       (resolve-dependencies
-        (alist-to-hash-table `((,name . ,(make-dep :system-name name :ref ref)))))))))
+  (download-dependencies
+   (resolve-dependencies
+    (alist-to-hash-table `((,name . ,(make-dep :system-name name :ref ref)))))))
 
 
 (defun update ()
