@@ -284,8 +284,8 @@ guess you know what you're doing.")
 
 (defun update ()
   "Updated dependencies."
-  ;; TODO: Future improvement: More intelligent update process.
-  (install t))
+  (delete-file (merge-pathnames "clm.lock" (env)))
+  (install))
 
 
 (defun load-system (name &key verbose silent force)
