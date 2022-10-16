@@ -337,9 +337,8 @@ VERBOSE, SILENT, FORCE a passed as is to LOAD-SYSTEM."
 
 
 (defun register-search-functions ()
-  (setf asdf:*system-definition-search-functions*
-        (append (list 'current-directory-search 'dot-clm-directory-search)
-                asdf:*system-definition-search-functions*)))
+  (dolist (sf (list 'current-directory-search 'dot-clm-directory-search))
+    (pushnew sf asdf:*system-definition-search-functions* :test #'eq)))
 
 
 
