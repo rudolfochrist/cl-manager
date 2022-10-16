@@ -288,7 +288,7 @@ guess you know what you're doing.")
   (install))
 
 
-(defun load-system (name &key verbose silent force)
+(defmethod load-system ((name string) &key verbose silent force)
   "Load system with NAME.
 
 If VERBOSE is non-nil display verbose output."
@@ -307,6 +307,10 @@ If VERBOSE is non-nil display verbose output."
           :test (lambda (condition) (typep condition 'asdf/find-component:missing-dependency))
           (install)
           (load-system name :verbose verbose :silent t))))))
+
+
+(defmethod load-system ((name symbol) &key verbose silent force)
+  (load-system (string-downcase (string name)) :verbose verbose :silent silent :force force))
 
 
 (defun load-systems (systems &key verbose silent force)
