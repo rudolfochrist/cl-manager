@@ -15,7 +15,8 @@
   :version (:read-file-line "version")
   :depends-on ((:require "asdf")
                (:require "uiop"))
-  :components ((:file "manager"))
+  :components ((:file "manager")
+               (:static-file "templates/boot.lisp"))
   :description "A Common Lisp Package/System/Project/Library Manager"
   :long-description
   #.(uiop:read-file-string

@@ -20,7 +20,8 @@
    #:add-local-system
    #:install-system
    #:load-systems
-   #:*system-blacklist*))
+   #:*system-blacklist*
+   #:write-boot-file))
 
 (in-package #:cl-manager)
 
@@ -358,3 +359,9 @@ e.g. using a different fork."
                        :if-does-not-exist :create)
     (format out "~&~A ~A ~A~{ ~A~}~%"
             project system-name source dependencies)))
+
+
+(defun write-boot-file (&optional (path (env)))
+  (uiop:copy-file
+   (asdf:system-relative-pathname "cl-manager" "templates/boot.lisp")
+   (merge-pathnames "boot.lisp" path)))
