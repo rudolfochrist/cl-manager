@@ -72,12 +72,8 @@ guess you know what you're doing.")
 
 ;;; helpers
 
-(defstruct dep
-  project system-name source ref)
-
-
 (defstruct %system
-  project system-name source dependencies)
+  project system-name source ref dependencies)
 
 
 (defun clm-install-directory ()
@@ -134,8 +130,8 @@ guess you know what you're doing.")
             do (destructuring-bind (system-name &optional ref)
                    (uiop:split-string line)
                  (setf (gethash system-name deps)
-                       (make-dep :system-name system-name
-                                 :ref ref)))
+                       (make-%system :system-name system-name
+                                     :ref ref)))
           finally (return deps))))
 
 
@@ -172,14 +168,14 @@ guess you know what you're doing.")
                    (gethash dep-name deps)
                  (let ((%system (find-system dep-name)))
                    (if foundp
-                       (setf (dep-project dep)
+                       (setf (%system-project dep)
                              (%system-project %system)
-                             (dep-source dep)
+                             (%system-source dep)
                              (%system-source %system))
                        (setf (gethash dep-name deps)
-                             (make-dep :project (%system-project %system)
-                                       :system-name dep-name
-                                       :source (%system-source %system))))
+                             (make-%system :project (%system-project %system)
+                                           :system-name dep-name
+                                           :source (%system-source %system))))
                    (setf q (append q (%system-dependencies %system)))))))
         finally (return (unique-project-dependencies deps))))
 
@@ -187,7 +183,7 @@ guess you know what you're doing.")
 (defun unique-project-dependencies (dependency-table)
   (loop for dep being the hash-values of dependency-table
         collect dep into deps
-        finally (return (remove-duplicates deps :test #'string= :key #'dep-project))))
+        finally (return (remove-duplicates deps :test #'string= :key #'%system-project))))
 
 
 (defun write-lockfile (dependencies)
@@ -196,9 +192,9 @@ guess you know what you're doing.")
                        :if-exists :supersede)
     (loop for dep in dependencies
           do (format out "~&~A ~A~@[ ~A~]~%"
-                     (dep-project dep)
-                     (dep-source dep)
-                     (dep-ref dep)))))
+                     (%system-project dep)
+                     (%system-source dep)
+                     (%system-ref dep)))))
 
 
 (defun read-lockfile (lockfile)
@@ -207,21 +203,21 @@ guess you know what you're doing.")
           while line
           collect (destructuring-bind (project source &optional ref)
                       (uiop:split-string line)
-                    (make-dep :project project
-                              :source source
-                              :ref ref)))))
+                    (make-%system :project project
+                                  :source source
+                                  :ref ref)))))
 
 
 
 (defun download-dependencies (deps)
   (loop for dep in deps
-        do (qprint "Installing ~A" t (dep-project dep))
-        unless (probe-file (merge-pathnames (format nil ".clm/~A" (dep-project dep)) (env)))
+        do (qprint "Installing ~A" t (%system-project dep))
+        unless (probe-file (merge-pathnames (format nil ".clm/~A" (%system-project dep)) (env)))
           do (exec
               (format nil "git clone --depth 1~@[ -b ~A~] ~A .clm/~A"
-                      (dep-ref dep)
-                      (dep-source dep)
-                      (dep-project dep)))
+                      (%system-ref dep)
+                      (%system-source dep)
+                      (%system-project dep)))
         finally (return (values))))
 
 
@@ -280,7 +276,7 @@ guess you know what you're doing.")
 (defun install-system (name &optional ref)
   (download-dependencies
    (resolve-dependencies
-    (alist-to-hash-table `((,name . ,(make-dep :system-name name :ref ref)))))))
+    (alist-to-hash-table `((,name . ,(make-%system :system-name name :ref ref)))))))
 
 
 (defun update ()
