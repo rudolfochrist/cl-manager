@@ -273,10 +273,19 @@ guess you know what you're doing.")
   (download-dependencies (read-lockfile (merge-pathnames "clm.lock" (env)))))
 
 
-(defun install-system (name &optional ref)
+(defun add-to-clmfile (name &optional ref)
+  (with-open-file (stream (merge-pathnames "clmfile" (env))
+                          :direction :output
+                          :if-exists :append
+                          :if-does-not-exist :create)
+    (format stream "~&~A~@[ ~A~]~%" name ref)))
+
+
+(defun install-system (name &key ref add)
   (download-dependencies
    (resolve-dependencies
-    (alist-to-hash-table `((,name . ,(make-%system :system-name name :ref ref)))))))
+    (alist-to-hash-table `((,name . ,(make-%system :system-name name :ref ref))))))
+  (when add (add-to-clmfile name ref)))
 
 
 (defun update ()
@@ -285,7 +294,7 @@ guess you know what you're doing.")
   (install))
 
 
-(defmethod load-system ((name string) &key verbose silent force)
+(defmethod load-system ((name string) &key verbose silent force ref add)
   "Load system with NAME.
 
 If VERBOSE is non-nil display verbose output."
@@ -295,19 +304,22 @@ If VERBOSE is non-nil display verbose output."
         (*compile-print* nil))
     (unless silent
       (qprint "Loading ~A." *standard-output* name))
-    (handler-bind ((warning #'muffle-warning)
-                   #+sbcl (sb-ext:compiler-note #'muffle-warning))
-      (restart-case
+    (handler-bind (#+sbcl (sb-ext:compiler-note #'muffle-warning)
+                   (warning #'muffle-warning))
+      (handler-case
           (asdf:load-system name :verbose verbose :force force)
-        (install ()
-          :report "Unmet dependencies. Install them?"
-          :test (lambda (condition) (typep condition 'asdf/find-component:missing-dependency))
-          (install)
-          (load-system name :verbose verbose :silent t))))))
+        (asdf/find-component:missing-component ()
+          (install-system name :ref ref :add add)
+          (load-system name :force force :silent t :verbose verbose))))))
 
 
-(defmethod load-system ((name symbol) &key verbose silent force)
-  (load-system (string-downcase (string name)) :verbose verbose :silent silent :force force))
+(defmethod load-system ((name symbol) &key verbose silent force ref add)
+  (load-system (string-downcase (string name))
+               :verbose verbose
+               :silent silent
+               :force force
+               :ref ref
+               :add add))
 
 
 (defun load-systems (systems &key verbose silent force)
