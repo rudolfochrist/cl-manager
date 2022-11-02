@@ -35,5 +35,7 @@
                       (if (probe-file systems)
                           (uiop:symbol-call :cl-manager :make-index-table systems)
                           (uiop:symbol-call :cl-manager :update-index)))
-                    (uiop:symbol-call :cl-manager :register-search-functions)))
+                    (uiop:symbol-call :cl-manager :register-search-functions)
+                    (pushnew :clm *features*)
+                    (pushnew :cl-manager *features*)))
 
