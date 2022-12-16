@@ -84,10 +84,12 @@ guess you know what you're doing.")
   (= 0 (length string)))
 
 
-(defun exec (command)
-  (uiop:run-program command
-                    :output '(:string :stripped t)
-                    :error-output :output))
+(defun exec (command &key verbose)
+  (let ((output (uiop:run-program command
+                                  :output '(:string :stripped t)
+                                  :error-output :output)))
+    (when verbose
+      (qprint output))))
 
 
 (defun curl-file (url filename)
@@ -209,7 +211,7 @@ guess you know what you're doing.")
 
 
 
-(defun download-dependencies (deps)
+(defun download-dependencies (deps &key verbose)
   (loop for dep in deps
         do (qprint "Installing ~A" t (%system-project dep))
         unless (probe-file (merge-pathnames (format nil ".clm/~A" (%system-project dep)) (env)))
@@ -217,7 +219,8 @@ guess you know what you're doing.")
               (format nil "git clone --depth 1~@[ -b ~A~] ~A .clm/~A"
                       (%system-ref dep)
                       (%system-source dep)
-                      (%system-project dep)))
+                      (%system-project dep))
+              :verbose verbose)
         finally (return (values))))
 
 
@@ -263,14 +266,14 @@ guess you know what you're doing.")
 
 
 
-(defun install (&optional force)
+(defun install (&key fresh verbose)
   "Install systems defined in CLMFILE."
-  (when (or force
+  (when (or fresh
             (not (probe-file (merge-pathnames "clm.lock" (env)))))
     (write-lockfile (resolve-dependencies (parse-clmfile (merge-pathnames "clmfile" (env))))))
-  (when force
+  (when fresh
     (uiop:delete-directory-tree (merge-pathnames ".clm/" (env)) :validate t))
-  (download-dependencies (read-lockfile (merge-pathnames "clm.lock" (env)))))
+  (download-dependencies (read-lockfile (merge-pathnames "clm.lock" (env))) :verbose verbose))
 
 
 (defun add-to-clmfile (name &optional ref)
