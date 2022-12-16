@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# see https://github.com/adriancooney/Taskfile
+
+if [[ -e .env ]]; then
+    source .env
+fi
+
+function make-readme {
+    emacs -Q --batch doc/README.org -l "$(realpath doc/org-export.el)"  -f org-ascii-export-to-ascii
+}
+
+
+function help {
+    printf "%s <task> [args]\n\nTasks:\n" "${0}"
+    compgen -A function | grep -v "^_" | cat -n
+    printf "\nExtended help:\n  Each task has comments for general usage\n"
+}
+
+TIMEFORMAT="Task completed in %3lR"
+time "${@:-help}"
