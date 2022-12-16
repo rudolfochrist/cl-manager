@@ -298,7 +298,16 @@ guess you know what you're doing.")
   (install))
 
 
-(defmethod load-system ((name string) &key verbose silent force ref add)
+(defun grab-missing (name)
+  ;; TODO: this is so ugly, but I don't know any other way to access
+  ;; the condition inside the the restart function.
+  (handler-case
+      (asdf:load-system name)
+    (asdf/find-component:missing-dependency (condition)
+      (asdf/find-component:missing-requires condition))))
+
+
+(defmethod load-system ((name string) &key verbose silent force load-tests)
   "Load system with NAME.
 
 If VERBOSE is non-nil display verbose output."
@@ -310,20 +319,38 @@ If VERBOSE is non-nil display verbose output."
       (qprint "Loading ~A." *standard-output* name))
     (handler-bind (#+sbcl (sb-ext:compiler-note #'muffle-warning)
                    (warning #'muffle-warning))
-      (handler-case
+      (restart-case
           (asdf:load-system name :verbose verbose :force force)
-        (asdf/find-component:missing-component ()
-          (install-system name :ref ref :add add)
-          (load-system name :force force :silent t :verbose verbose))))))
+        (add-dependency ()
+          :test (lambda (c)
+                  (and (typep c 'asdf/find-component:missing-dependency)
+                       (clm:find-system (asdf/find-component:missing-requires c) nil)))
+          :report (lambda (stream)
+                    (format stream "Add missing dependency to clmfile, run update and try again loading?"))
+          (let ((missing (grab-missing name)))
+            (add-to-clmfile missing)
+            (update)
+            (load-system name
+                         :verbose verbose
+                         :silent silent
+                         :force force
+                         :load-tests load-tests))))
+      (when load-tests
+        (load-system (concatenate 'string name "/test")
+                     :verbose verbose
+                     :silent silent
+                     :force force))))
+  t)
 
 
-(defmethod load-system ((name symbol) &key verbose silent force ref add)
+(defmethod load-system ((name symbol) &key verbose silent force ref add load-tests)
   (load-system (string-downcase (string name))
                :verbose verbose
                :silent silent
                :force force
                :ref ref
-               :add add))
+               :add add
+               :load-tests load-tests))
 
 
 (defun load-systems (systems &key verbose silent force)
