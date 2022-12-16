@@ -32,5 +32,6 @@
            (uiop:directory-files (merge-pathnames ".clm/" (uiop:getcwd)) "**/*.asd")))
 
 
-(push 'current-directory-search asdf:*system-definition-search-functions*)
-(push 'dot-clm-directory-search asdf:*system-definition-search-functions*)
+(setf asdf:*system-definition-search-functions*
+      (nconc asdf:*system-definition-search-functions*
+             (list 'current-directory-search 'dot-clm-directory-search)))
