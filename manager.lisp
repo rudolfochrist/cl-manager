@@ -246,13 +246,14 @@ guess you know what you're doing.")
 
 
 
-(defun find-system (name)
+(defun find-system (name &optional (error t))
   "Lookup system with NAME in index."
   (multiple-value-bind (system foundp)
       (gethash name *index*)
-    (unless foundp
-      (error 'system-not-found :system name))
-    system))
+    (cond
+      (foundp system)
+      (error (error 'system-not-found :system name))
+      (t nil))))
 
 
 (defun update-index (&optional (url *index-url*))
