@@ -249,7 +249,10 @@ guess you know what you're doing.")
 (defun find-system (name &optional (error t))
   "Lookup system with NAME in index."
   (multiple-value-bind (system foundp)
-      (gethash name *index*)
+      (gethash (etypecase name
+                 (string name)
+                 (symbol (string-downcase (string name))))
+               *index*)
     (cond
       (foundp system)
       (error (error 'system-not-found :system name))
