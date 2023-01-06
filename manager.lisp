@@ -257,9 +257,10 @@ guess you know what you're doing.")
 
 
 (defun update-index (&optional (url *index-url*))
-  (qprint "Updating index...")
   (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt")))
-    (curl-file url systems-file)
+    (unless (probe-file systems-file)
+      (qprint "Updating index...")
+      (curl-file url systems-file))
     (make-index-table systems-file))
   ;; local index
   (dolist (index-file (uiop:directory-files (uiop:pathname-directory-pathname *local-index-file*)))
