@@ -41,6 +41,8 @@ guess you know what you're doing.")
 ;;; variables
 
 (defvar *index-url* "https://raw.githubusercontent.com/rudolfochrist/clm-projects/master/systems.txt")
+(defvar *index-version-url*
+  "https://raw.githubusercontent.com/rudolfochrist/clm-projects/master/version.txt")
 (defvar *local-index-file* (merge-pathnames "clm/local.txt" (uiop:xdg-data-home)))
 (defvar *index* nil)
 
@@ -88,12 +90,17 @@ guess you know what you're doing.")
   (let ((output (uiop:run-program command
                                   :output '(:string :stripped t)
                                   :error-output :output)))
-    (when verbose
-      (qprint output))))
+    (prog1
+        output
+      (when verbose
+        (qprint output)))))
 
 
 (defun curl-file (url filename)
   (exec (format nil "curl -fsSL ~A -o ~A" url filename)))
+
+(defun curl (url)
+  (exec (format nil "curl -fsSL ~A" url)))
 
 
 (defun qprint (message &optional stream &rest arguments)
@@ -224,6 +231,17 @@ guess you know what you're doing.")
         finally (return (values))))
 
 
+(defun read-index-version ()
+  (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt")))
+    (when (probe-file systems-file)
+      (with-open-file (stream systems-file)
+        (subseq (read-line stream) 2)))))
+
+
+(defun get-remote-index-version ()
+  (curl *index-version-url*))
+
+
 ;;; API
 
 (defun env ()
@@ -260,10 +278,14 @@ guess you know what you're doing.")
 
 
 (defun update-index (&optional (url *index-url*))
-  (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt")))
-    (unless (probe-file systems-file)
-      (qprint "Updating index...")
-      (curl-file url systems-file))
+  (let ((systems-file (asdf:system-relative-pathname "cl-manager" "systems.txt"))
+        (local-version (read-index-version))
+        (remote-version (get-remote-index-version)))
+    (if (string= local-version remote-version)
+        (qprint "Latest version ~A already installed." t remote-version)
+        (progn
+          (qprint "Updating index to version ~A." t remote-version)
+          (curl-file url systems-file)))
     (make-index-table systems-file))
   ;; local index
   (dolist (index-file (uiop:directory-files (uiop:pathname-directory-pathname *local-index-file*)))
