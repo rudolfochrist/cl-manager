@@ -21,7 +21,8 @@
    #:install-system
    #:load-systems
    #:*system-blacklist*
-   #:write-boot-file))
+   #:write-boot-file
+   #:info))
 
 (in-package #:cl-manager)
 
@@ -432,3 +433,15 @@ e.g. using a different fork."
   (uiop:copy-file
    (asdf:system-relative-pathname "cl-manager" "templates/boot.lisp")
    (merge-pathnames "boot.lisp" path)))
+
+
+(defun info ()
+  "Print clm-manager informaton."
+  (qprint "cl-manager:")
+  (qprint " - ENVIRONMENT: ~A" t (env))
+  (qprint " - CL-MANAGER VERSION: ~A" t (asdf:component-version (asdf:find-system "cl-manager")))
+  (qprint " - INDEX VERSION: ~A" t (read-index-version))
+  (qprint " - INSTALLATION DIRECTORY: ~A" t (asdf:system-source-directory "cl-manager"))
+  (qprint " - INDEX URL: ~A" t *index-url*)
+  (qprint " - INDEX VERSION URL: ~A" t *index-version-url*)
+  (qprint " - LOCAL INDEX FILE: ~A " t *local-index-file*))
