@@ -18,7 +18,6 @@
    #:update
    #:find-system
    #:add-local-system
-   #:install-system
    #:load-systems
    #:*system-blacklist*
    #:write-boot-file
@@ -310,13 +309,6 @@ guess you know what you're doing.")
                           :if-exists :append
                           :if-does-not-exist :create)
     (format stream "~&~A~@[ ~A~]~%" name ref)))
-
-
-(defun install-system (name &key ref add)
-  (download-dependencies
-   (resolve-dependencies
-    (alist-to-hash-table `((,name . ,(make-%system :system-name name :ref ref))))))
-  (when add (add-to-clmfile name ref)))
 
 
 (defun update ()
