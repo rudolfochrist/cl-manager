@@ -103,6 +103,13 @@ guess you know what you're doing.")
   (exec (format nil "curl -fsSL ~A" url)))
 
 
+(defun git-ref (system &key verbose)
+  (exec `("git"
+          "--git-dir" ,(format nil ".clm/~A/.git" (%system-project system))
+          "rev-parse" "--verify" "HEAD")
+        :verbose verbose))
+
+
 (defun qprint (message &optional stream &rest arguments)
   (if (null arguments)
       (format (or stream t) "~&; ~A~%" message)
@@ -177,10 +184,8 @@ guess you know what you're doing.")
                    (gethash dep-name deps)
                  (let ((%system (find-system dep-name)))
                    (if foundp
-                       (setf (%system-project dep)
-                             (%system-project %system)
-                             (%system-source dep)
-                             (%system-source %system))
+                       (setf (%system-project dep) (%system-project %system)
+                             (%system-source dep) (%system-source %system))
                        (setf (gethash dep-name deps)
                              (make-%system :project (%system-project %system)
                                            :system-name dep-name
@@ -242,6 +247,13 @@ guess you know what you're doing.")
   (curl *index-version-url*))
 
 
+(defun add-refs (deps &key verbose)
+  (loop for system in deps
+        when (null (%system-ref system))
+          do (setf (%system-ref system)
+                   (git-ref system :verbose verbose))))
+
+
 ;;; API
 
 (defun env ()
@@ -300,7 +312,10 @@ guess you know what you're doing.")
     (write-lockfile (resolve-dependencies (parse-clmfile (merge-pathnames "clmfile" (env))))))
   (when fresh
     (uiop:delete-directory-tree (merge-pathnames ".clm/" (env)) :validate t))
-  (download-dependencies (read-lockfile (merge-pathnames "clm.lock" (env))) :verbose verbose))
+  (let ((deps (read-lockfile (merge-pathnames "clm.lock" (env)))))
+    (download-dependencies deps :verbose verbose)
+    (add-refs deps :verbose verbose)
+    (write-lockfile deps)))
 
 
 (defun add-to-clmfile (name &optional ref)
@@ -348,7 +363,7 @@ If VERBOSE is non-nil display verbose output."
                     (format stream "Add missing dependency to clmfile, run update and try again loading?"))
           (let ((missing (grab-missing name)))
             (add-to-clmfile missing)
-            (update)
+            (install)
             (load-system name
                          :verbose verbose
                          :silent silent
