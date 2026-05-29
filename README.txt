@@ -1,3 +1,9 @@
+0 DEPRECATION NOTE
+======
+
+Superseded by [dm]
+
+
 1 NAME
 ======
 
@@ -167,3 +173,5 @@
 [borg] <https://github.com/emacscollective/borg>
 
 [clm-projects] <https://github.com/rudolfochrist/clm-projects>
+
+[dm] <https://codeberg.org/rudolfochrist/dm>
